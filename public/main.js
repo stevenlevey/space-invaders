@@ -874,9 +874,7 @@ function playGameOverSound() {
     try {
       el.currentTime = 0;
       const p = el.play();
-      if (p && typeof p.then === "function") {
-        p.catch(() => fallbackTone());
-      }
+      if (p && typeof p.then === "function") p.catch(() => fallbackTone());
       return;
     } catch (_) {
       // fall through
@@ -886,15 +884,38 @@ function playGameOverSound() {
 }
 
 function playBulletSound() {
+  // Prefer Web Audio for reliable, low-latency mobile playback
+  try {
+    const ctx = getAudioCtx();
+    const start = () => {
+      const t0 = ctx.currentTime + 0.004;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "square";
+      osc.frequency.setValueAtTime(1200, t0);
+      osc.frequency.exponentialRampToValueAtTime(900, t0 + 0.08);
+      gain.gain.setValueAtTime(0.03, t0);
+      gain.gain.exponentialRampToValueAtTime(0.00001, t0 + 0.09);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.1);
+    };
+    if (ctx.state === "suspended") {
+      ctx.resume().then(start).catch(start);
+    } else {
+      start();
+    }
+    return;
+  } catch (_) {
+    // fall back to HTMLMediaElement
+  }
   const el = sfxBullet;
   if (!el) return;
   try {
     el.currentTime = 0;
     const p = el.play();
     if (p && typeof p.then === "function") p.catch(() => {});
-  } catch (_) {
-    // ignore
-  }
+  } catch (_) {}
 }
 
 function fallbackTone() {

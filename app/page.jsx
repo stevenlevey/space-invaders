@@ -39,9 +39,9 @@ export default function Page() {
         Restart
       </div>
 
-      <audio id="sfxBullet" src="/bullet.mp3" preload="auto"></audio>
-      <audio id="sfxGameOver" src="/game over.mp3" preload="auto"></audio>
-      <audio id="sfxMega" src="/mega blast.mp3" preload="auto"></audio>
+      <audio id="sfxBullet" src="/bullet.mp3" preload="auto" playsInline></audio>
+      <audio id="sfxGameOver" src="/game over.mp3" preload="auto" playsInline></audio>
+      <audio id="sfxMega" src="/mega blast.mp3" preload="auto" playsInline></audio>
 
       <div id="touchControls" aria-label="Touch controls" role="group">
         <div className="cluster left">
