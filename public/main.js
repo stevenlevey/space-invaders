@@ -17,7 +17,7 @@ function getAudioCtx() {
   if (!sharedAudioCtx) {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     try {
-      sharedAudioCtx = new AudioCtx({ latencyHint: 'interactive' });
+      sharedAudioCtx = new AudioCtx({ latencyHint: "interactive" });
     } catch (_) {
       sharedAudioCtx = new AudioCtx();
     }
@@ -46,8 +46,14 @@ function unlockAudio() {
     audioUnlocked = true;
     // Warm up and decode buffers after first gesture
     // Use encoded URLs for files with spaces
-    if (!audioBuffers.mega) loadAudioBuffer(encodeURI("/mega blast.mp3")).then((b)=>{ audioBuffers.mega = b; });
-    if (!audioBuffers.gameOver) loadAudioBuffer(encodeURI("/game over.mp3")).then((b)=>{ audioBuffers.gameOver = b; });
+    if (!audioBuffers.mega)
+      loadAudioBuffer(encodeURI("/mega blast.mp3")).then((b) => {
+        audioBuffers.mega = b;
+      });
+    if (!audioBuffers.gameOver)
+      loadAudioBuffer(encodeURI("/game over.mp3")).then((b) => {
+        audioBuffers.gameOver = b;
+      });
   } catch (_) {}
 }
 window.addEventListener("pointerdown", unlockAudio, { once: true });
@@ -68,9 +74,12 @@ function resizePixelTextCanvas() {
   const vw = Math.max(320, Math.min(window.innerWidth, 1200));
   const vh = Math.max(320, window.innerHeight);
   const maxCssWidth = Math.floor(vw * 0.92);
-  const maxCssHeight = Math.floor(vh * 0.30);
+  const maxCssHeight = Math.floor(vh * 0.3);
   const widthByHeight = maxCssHeight * 4; // 4:1 aspect
-  const targetWidth = Math.min(800, Math.max(360, Math.min(maxCssWidth, widthByHeight)));
+  const targetWidth = Math.min(
+    800,
+    Math.max(360, Math.min(maxCssWidth, widthByHeight))
+  );
   const targetHeight = Math.floor(targetWidth / 4);
   // Set canvas drawing buffer size for crisp rendering
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -201,8 +210,12 @@ function drawPixelText() {
   if (!pixelCtx) return;
 
   // Work in CSS pixels (because we scaled the context by DPR)
-  const cssWidth = Math.floor(pixelTextCanvas.width / (window.devicePixelRatio || 1));
-  const cssHeight = Math.floor(pixelTextCanvas.height / (window.devicePixelRatio || 1));
+  const cssWidth = Math.floor(
+    pixelTextCanvas.width / (window.devicePixelRatio || 1)
+  );
+  const cssHeight = Math.floor(
+    pixelTextCanvas.height / (window.devicePixelRatio || 1)
+  );
   pixelCtx.clearRect(0, 0, cssWidth, cssHeight);
 
   const text = "GAME OVER";
@@ -677,28 +690,86 @@ function draw() {
     ctx.fillRect(e.x, e.y, e.w, e.h);
   }
 
-  // Player bullets as sparkling fireballs (ellipse with transform fallback for Safari)
+  // Player bullets as sparkling fireballs (with mobile fallback)
   for (const b of bullets) {
-    const cx = b.x + b.w / 2;
-    const cy = b.y + b.h / 2;
-    const rx = 4;
-    const ry = 8;
-    ctx.save();
-    ctx.shadowColor = "#ffd447";
-    ctx.shadowBlur = 16;
-    // Use transform+arc so older Safari renders consistently
-    ctx.translate(cx, cy);
-    ctx.scale(rx, ry);
-    const grad = ctx.createRadialGradient(0, -0.25, 0.1, 0, 0, 1);
-    grad.addColorStop(0.0, "#fffbe8");
-    grad.addColorStop(0.35, "#ffd447");
-    grad.addColorStop(0.75, "#ff8c3a");
-    grad.addColorStop(1.0, "rgba(255,140,58,0)");
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(0, 0, 1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    let renderSuccess = false;
+
+    if (!isMobileDevice) {
+      // Try complex desktop rendering first
+      try {
+        const cx = b.x + b.w / 2;
+        const cy = b.y + b.h / 2;
+        const rx = 4;
+        const ry = 8;
+        ctx.save();
+        ctx.shadowColor = "#ffd447";
+        ctx.shadowBlur = 16;
+        // Use transform+arc so older Safari renders consistently
+        ctx.translate(cx, cy);
+        ctx.scale(rx, ry);
+        const grad = ctx.createRadialGradient(0, -0.25, 0.1, 0, 0, 1);
+        grad.addColorStop(0.0, "#fffbe8");
+        grad.addColorStop(0.35, "#ffd447");
+        grad.addColorStop(0.75, "#ff8c3a");
+        grad.addColorStop(1.0, "rgba(255,140,58,0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        renderSuccess = true;
+      } catch (e) {
+        console.warn(
+          "Complex bullet rendering failed, falling back to simple rendering:",
+          e
+        );
+        ctx.restore(); // Ensure context is restored even on error
+      }
+    }
+
+    // Mobile fallback OR desktop fallback if complex rendering failed
+    if (isMobileDevice || !renderSuccess) {
+      ctx.save();
+      ctx.fillStyle = "#ffd447";
+      ctx.shadowColor = "#ffd447";
+      ctx.shadowBlur = 8;
+
+      // Draw a simple elongated oval (with fallback to rectangle)
+      try {
+        ctx.beginPath();
+        ctx.ellipse(
+          b.x + b.w / 2,
+          b.y + b.h / 2,
+          b.w / 2,
+          b.h / 2,
+          0,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+
+        // Add a bright center for extra visibility
+        ctx.fillStyle = "#fffbe8";
+        ctx.beginPath();
+        ctx.ellipse(
+          b.x + b.w / 2,
+          b.y + b.h / 2,
+          b.w / 4,
+          b.h / 4,
+          0,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      } catch (e) {
+        // Final fallback: simple rectangles that work everywhere
+        ctx.fillStyle = "#ffd447";
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        ctx.fillStyle = "#fffbe8";
+        ctx.fillRect(b.x + 1, b.y + 2, b.w - 2, b.h - 4);
+      }
+      ctx.restore();
+    }
   }
   // Sparks (additive blend for nice glow)
   ctx.save();
@@ -824,10 +895,11 @@ function tryFireMega() {
         // Fallback to HTML audio if buffer not ready yet
         sfxMega.currentTime = 0;
         const p = sfxMega.play();
-        if (p && typeof p.then === 'function') p.catch(()=>{});
+        if (p && typeof p.then === "function") p.catch(() => {});
       }
     };
-    if (ctx.state === 'suspended') ctx.resume().then(start).catch(start); else start();
+    if (ctx.state === "suspended") ctx.resume().then(start).catch(start);
+    else start();
   } catch (_) {}
   const centerX = player.x + player.width / 2;
   const gap = 16; // pixels between the two mega blasts
@@ -948,6 +1020,67 @@ function playHitSound() {
   }
 }
 
+// Detect mobile/touch devices for rendering fallbacks
+let isMobileDevice = false;
+let forceDesktopRendering = false; // Allow manual override
+
+function detectMobileDevice() {
+  // Allow manual override for testing/debugging
+  if (forceDesktopRendering) {
+    isMobileDevice = false;
+    return false;
+  }
+
+  // More accurate mobile detection
+  const hasCoarsePointer =
+    window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+  const hasNoHover =
+    window.matchMedia && window.matchMedia("(hover: none)").matches;
+  const isSmallScreen = window.innerWidth <= 768; // More conservative threshold
+  const isMobileUserAgent =
+    /iPhone|iPad|iPod|Android|BlackBerry|Opera Mini|IEMobile|WPDesktop/i.test(
+      navigator.userAgent
+    );
+
+  // Primary detection: coarse pointer (finger) and no hover capability
+  const isPrimaryMobile = hasCoarsePointer && hasNoHover;
+
+  // Secondary detection: small screen OR mobile user agent
+  const isSecondaryMobile = isSmallScreen || isMobileUserAgent;
+
+  isMobileDevice = isPrimaryMobile || isSecondaryMobile;
+
+  // Debug logging (remove in production)
+  console.log("Mobile detection:", {
+    hasCoarsePointer,
+    hasNoHover,
+    isSmallScreen,
+    isMobileUserAgent,
+    isPrimaryMobile,
+    isSecondaryMobile,
+    finalResult: isMobileDevice,
+    screenWidth: window.innerWidth,
+    userAgent: navigator.userAgent.substring(0, 50) + "...",
+  });
+
+  return isMobileDevice;
+}
+
+// Allow manual override via console for testing
+window.setDesktopRendering = (force) => {
+  forceDesktopRendering = force;
+  detectMobileDevice();
+  console.log(
+    "Desktop rendering forced:",
+    force,
+    "Current mobile detection:",
+    isMobileDevice
+  );
+};
+
+detectMobileDevice();
+window.addEventListener("resize", detectMobileDevice);
+
 // Touch controls wiring for mobile/tablet
 (function setupTouchControls() {
   const btnLeft = document.getElementById("btnLeft");
@@ -1015,7 +1148,10 @@ function playGameOverSound() {
         const g = ctx.createGain();
         g.gain.setValueAtTime(0.0001, ctx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + Math.min(1.2, src.buffer.duration));
+        g.gain.exponentialRampToValueAtTime(
+          0.00001,
+          ctx.currentTime + Math.min(1.2, src.buffer.duration)
+        );
         src.connect(g).connect(ctx.destination);
         src.start();
         src.stop(ctx.currentTime + Math.min(1.4, src.buffer.duration + 0.1));
@@ -1026,12 +1162,13 @@ function playGameOverSound() {
       if (el) {
         el.currentTime = 0;
         const p = el.play();
-        if (p && typeof p.then === 'function') p.catch(() => fallbackTone());
+        if (p && typeof p.then === "function") p.catch(() => fallbackTone());
       } else {
         fallbackTone();
       }
     };
-    if (ctx.state === 'suspended') ctx.resume().then(start).catch(start); else start();
+    if (ctx.state === "suspended") ctx.resume().then(start).catch(start);
+    else start();
   } catch (_) {
     fallbackTone();
   }
