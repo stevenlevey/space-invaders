@@ -344,6 +344,20 @@ hulkImg.onerror = () => {
 };
 hulkImg.src = "./hulk.png"; // Tries root first, then falls back to ./assets/hulk.png
 
+// Reserve bottom space on touch devices so on-screen controls don't cover the player
+let bottomUiMargin = 0;
+function computeUiMargin() {
+  const isTouch =
+    (window.matchMedia &&
+      (window.matchMedia("(hover: none)").matches ||
+        window.matchMedia("(pointer: coarse)").matches)) ||
+    window.innerWidth <= 900;
+  // Approximate control stack height
+  bottomUiMargin = isTouch ? 110 : 0;
+}
+computeUiMargin();
+window.addEventListener("resize", computeUiMargin);
+
 function reset() {
   state.score = 0;
   state.lives = 3;
@@ -355,6 +369,7 @@ function reset() {
   timeSinceFire = 0;
   playerInvulnTimer = 0;
   player.x = canvas.width / 2 - player.width / 2;
+  player.y = canvas.height - 50 - bottomUiMargin;
   initGalaxy();
   spawnWave(state.level);
   hud.scoreEl.textContent = String(state.score);
@@ -370,6 +385,9 @@ function aabb(a, b) {
 
 function update(dt) {
   if (!state.running) return;
+
+  // Keep player vertical position above the touch controls area when present
+  player.y = canvas.height - 50 - bottomUiMargin;
 
   // Player movement
   playerInvulnTimer = Math.max(0, playerInvulnTimer - dt);

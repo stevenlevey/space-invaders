@@ -4,6 +4,7 @@
   --accent: #7ef9ff;
   --accent-2: #8aff80;
   --danger: #ff5d73;
+  --controls-height: 120px;
 }
 
 * {
@@ -81,6 +82,8 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  max-width: 100%;
+  height: auto;
 }
 
 #instructions {
@@ -105,7 +108,8 @@ body {
   justify-content: center;
   text-align: center;
   color: #f6f7ff;
-  text-shadow: 0 0 6px rgba(255, 255, 255, 0.4), 0 0 18px rgba(126, 249, 255, 0.3);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.4),
+    0 0 18px rgba(126, 249, 255, 0.3);
   padding: 24px;
 }
 #pixelText {
@@ -135,7 +139,7 @@ body {
 
 /* Subtle CRT scanlines for retro feel */
 #gameOverOverlay::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(
@@ -165,7 +169,7 @@ body {
 /* Touch Controls */
 #touchControls {
   position: fixed;
-  inset: auto 0 10px 0;
+  inset: auto 0 calc(10px + env(safe-area-inset-bottom)) 0;
   display: none;
   justify-content: space-between;
   align-items: center;
@@ -182,8 +186,8 @@ body {
   min-width: 70px;
   min-height: 70px;
   border-radius: 999px;
-  border: 2px solid rgba(255,255,255,0.25);
-  background: rgba(255,255,255,0.08);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--fg);
   font-weight: 800;
   text-transform: uppercase;
@@ -192,8 +196,13 @@ body {
 
 /* Show controls on small viewports or touch devices */
 @media (hover: none), (pointer: coarse), (max-width: 900px) {
-  #touchControls { display: flex; }
-  #hud { width: min(100%, 800px); }
+  #touchControls {
+    display: flex;
+  }
+  #hud {
+    width: min(100%, 800px);
+  }
+  body {
+    padding-bottom: calc(var(--controls-height) + env(safe-area-inset-bottom));
+  }
 }
-
-

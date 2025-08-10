@@ -1,4 +1,4 @@
-import Script from 'next/script'
+import Script from "next/script";
 
 export default function Page() {
   return (
@@ -23,7 +23,7 @@ export default function Page() {
         </button>
       </div>
 
-      <canvas id="gameCanvas" width={800} height={600}></canvas>
+      <canvas id="gameCanvas" width={800} height={600} style={{ maxWidth: '100%', height: 'auto' }}></canvas>
 
       <div id="gameOverOverlay" aria-live="polite" aria-hidden="true">
         <div className="retro">
@@ -35,7 +35,8 @@ export default function Page() {
       </div>
 
       <div id="instructions">
-        Move: Arrow Keys or A/D • Shoot: Space • Mega: M • Pause: P • Or click Restart
+        Move: Arrow Keys or A/D • Shoot: Space • Mega: M • Pause: P • Or click
+        Restart
       </div>
 
       <audio id="sfxBullet" src="/bullet.mp3" preload="auto"></audio>
@@ -44,19 +45,27 @@ export default function Page() {
 
       <div id="touchControls" aria-label="Touch controls" role="group">
         <div className="cluster left">
-          <button id="btnLeft" type="button" aria-label="Move left">⟵</button>
-          <button id="btnRight" type="button" aria-label="Move right">⟶</button>
+          <button id="btnLeft" type="button" aria-label="Move left">
+            ⟵
+          </button>
+          <button id="btnRight" type="button" aria-label="Move right">
+            ⟶
+          </button>
         </div>
         <div className="cluster right">
-          <button id="btnFire" type="button" aria-label="Fire">Fire</button>
-          <button id="btnMega" type="button" aria-label="Mega">Mega</button>
-          <button id="btnPause" type="button" aria-label="Pause">Pause</button>
+          <button id="btnFire" type="button" aria-label="Fire">
+            Fire
+          </button>
+          <button id="btnMega" type="button" aria-label="Mega">
+            Mega
+          </button>
+          <button id="btnPause" type="button" aria-label="Pause">
+            Pause
+          </button>
         </div>
       </div>
 
       <Script src="/main.js" strategy="afterInteractive" />
     </main>
-  )
+  );
 }
-
-
