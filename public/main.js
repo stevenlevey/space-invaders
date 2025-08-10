@@ -43,6 +43,24 @@ const overlayRestartBtn = document.getElementById("overlayRestartBtn");
 const pixelTextCanvas = document.getElementById("pixelText");
 const pixelCtx = pixelTextCanvas.getContext("2d");
 
+function resizePixelTextCanvas() {
+  if (!pixelTextCanvas) return;
+  // Target up to 92vw and ~30vh while preserving 4:1 aspect (width:height)
+  const vw = Math.max(320, Math.min(window.innerWidth, 1200));
+  const vh = Math.max(320, window.innerHeight);
+  const maxCssWidth = Math.floor(vw * 0.92);
+  const maxCssHeight = Math.floor(vh * 0.30);
+  const widthByHeight = maxCssHeight * 4; // 4:1 aspect
+  const targetWidth = Math.min(800, Math.max(360, Math.min(maxCssWidth, widthByHeight)));
+  const targetHeight = Math.floor(targetWidth / 4);
+  // Set canvas drawing buffer size for crisp rendering
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  pixelTextCanvas.width = Math.floor(targetWidth * dpr);
+  pixelTextCanvas.height = Math.floor(targetHeight * dpr);
+  // Scale context so our drawing logic works in CSS pixels
+  pixelCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
 // Game state
 const state = {
   running: true,
@@ -162,7 +180,10 @@ const PIXEL_FONT = {
 function drawPixelText() {
   if (!pixelCtx) return;
 
-  pixelCtx.clearRect(0, 0, pixelTextCanvas.width, pixelTextCanvas.height);
+  // Work in CSS pixels (because we scaled the context by DPR)
+  const cssWidth = Math.floor(pixelTextCanvas.width / (window.devicePixelRatio || 1));
+  const cssHeight = Math.floor(pixelTextCanvas.height / (window.devicePixelRatio || 1));
+  pixelCtx.clearRect(0, 0, cssWidth, cssHeight);
 
   const text = "GAME OVER";
   const charWidth = 8;
@@ -170,8 +191,8 @@ function drawPixelText() {
 
   // Calculate optimal pixel size accounting for shadow offset
   const shadowOffset = 3;
-  const availableWidth = 800 - shadowOffset;
-  const availableHeight = 200 - shadowOffset;
+  const availableWidth = cssWidth - shadowOffset;
+  const availableHeight = cssHeight - shadowOffset;
 
   // Find largest pixel size that fits
   let pixelSize = 1;
@@ -192,8 +213,8 @@ function drawPixelText() {
   const totalWidth =
     text.length * (charWidth * pixelSize + spacing * pixelSize) -
     spacing * pixelSize;
-  const startX = (pixelTextCanvas.width - totalWidth) / 2;
-  const startY = (pixelTextCanvas.height - charHeight * pixelSize) / 2;
+  const startX = (cssWidth - totalWidth) / 2;
+  const startY = (cssHeight - charHeight * pixelSize) / 2;
 
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
@@ -636,6 +657,7 @@ function gameOver() {
   ctx.restore();
   if (overlay) {
     overlay.setAttribute("aria-hidden", "false");
+    resizePixelTextCanvas();
     drawPixelText(); // Draw the pixelated "GAME OVER" text
   }
 }
@@ -648,6 +670,16 @@ window.addEventListener("keydown", (e) => {
   ) {
     state.running = true;
     reset();
+  }
+});
+
+// Keep pixel text responsive when rotating / resizing while overlay is visible
+window.addEventListener("resize", () => {
+  if (!overlay) return;
+  const hidden = overlay.getAttribute("aria-hidden") === "true";
+  if (!hidden) {
+    resizePixelTextCanvas();
+    drawPixelText();
   }
 });
 
@@ -856,10 +888,17 @@ function playHitSound() {
     const onPause = (e) => {
       e.preventDefault();
       state.running = !state.running;
+      // Clear movement/fire keys when pausing to avoid stuck inputs on resume
+      if (!state.running) {
+        keys.delete("ArrowLeft");
+        keys.delete("ArrowRight");
+        keys.delete(" ");
+        keys.delete("Space");
+      }
     };
+    btnPause.addEventListener("pointerdown", onPause);
     btnPause.addEventListener("click", onPause);
-    btnPause.addEventListener("pointerup", onPause);
-    btnPause.addEventListener("touchend", onPause, { passive: false });
+    btnPause.addEventListener("touchstart", onPause, { passive: false });
   }
 })();
 

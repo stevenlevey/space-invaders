@@ -117,6 +117,8 @@ body {
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
+  max-width: 92vw;
+  height: auto;
 }
 .retroTitle::after {
   display: none;
@@ -175,6 +177,7 @@ body {
   align-items: center;
   padding: 0 14px;
   pointer-events: none; /* clusters enable */
+  z-index: 1000;
 }
 #touchControls .cluster {
   display: flex;
