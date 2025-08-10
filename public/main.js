@@ -658,24 +658,26 @@ function draw() {
     ctx.fillRect(e.x, e.y, e.w, e.h);
   }
 
-  // Player bullets as sparkling fireballs
+  // Player bullets as sparkling fireballs (ellipse with transform fallback for Safari)
   for (const b of bullets) {
     const cx = b.x + b.w / 2;
     const cy = b.y + b.h / 2;
+    const rx = 4;
+    const ry = 8;
     ctx.save();
     ctx.shadowColor = "#ffd447";
     ctx.shadowBlur = 16;
-    // Flame ellipse
-    const rx = 4;
-    const ry = 8;
-    const grad = ctx.createRadialGradient(cx, cy - 2, 0, cx, cy, ry);
+    // Use transform+arc so older Safari renders consistently
+    ctx.translate(cx, cy);
+    ctx.scale(rx, ry);
+    const grad = ctx.createRadialGradient(0, -0.25, 0.1, 0, 0, 1);
     grad.addColorStop(0.0, "#fffbe8");
     grad.addColorStop(0.35, "#ffd447");
     grad.addColorStop(0.75, "#ff8c3a");
     grad.addColorStop(1.0, "rgba(255,140,58,0)");
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.arc(0, 0, 1, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -684,10 +686,10 @@ function draw() {
   ctx.globalCompositeOperation = "lighter";
   for (const p of sparkParticles) {
     ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+    // Safari iOS sometimes ignores small arcs; draw as tiny squares
     ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-    ctx.fill();
+    const s = Math.max(1, p.size);
+    ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
   }
   ctx.restore();
   // Mega bullets: draw Pixel Hulk sprite with a soft glow
