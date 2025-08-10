@@ -42,6 +42,18 @@ export default function Page() {
       <audio id="sfxGameOver" src="/game over.mp3" preload="auto"></audio>
       <audio id="sfxMega" src="/mega blast.mp3" preload="auto"></audio>
 
+      <div id="touchControls" aria-label="Touch controls" role="group">
+        <div className="cluster left">
+          <button id="btnLeft" type="button" aria-label="Move left">⟵</button>
+          <button id="btnRight" type="button" aria-label="Move right">⟶</button>
+        </div>
+        <div className="cluster right">
+          <button id="btnFire" type="button" aria-label="Fire">Fire</button>
+          <button id="btnMega" type="button" aria-label="Mega">Mega</button>
+          <button id="btnPause" type="button" aria-label="Pause">Pause</button>
+        </div>
+      </div>
+
       <Script src="/main.js" strategy="afterInteractive" />
     </main>
   )

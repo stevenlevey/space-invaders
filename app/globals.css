@@ -162,4 +162,38 @@ body {
   }
 }
 
+/* Touch Controls */
+#touchControls {
+  position: fixed;
+  inset: auto 0 10px 0;
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 14px;
+  pointer-events: none; /* clusters enable */
+}
+#touchControls .cluster {
+  display: flex;
+  gap: 10px;
+  pointer-events: auto;
+}
+#touchControls button {
+  appearance: none;
+  min-width: 70px;
+  min-height: 70px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.08);
+  color: var(--fg);
+  font-weight: 800;
+  text-transform: uppercase;
+  backdrop-filter: blur(6px);
+}
+
+/* Show controls on small viewports or touch devices */
+@media (hover: none), (pointer: coarse), (max-width: 900px) {
+  #touchControls { display: flex; }
+  #hud { width: min(100%, 800px); }
+}
+
 

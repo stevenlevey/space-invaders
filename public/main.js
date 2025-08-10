@@ -794,6 +794,57 @@ function playHitSound() {
   }
 }
 
+// Touch controls wiring for mobile/tablet
+(function setupTouchControls() {
+  const btnLeft = document.getElementById("btnLeft");
+  const btnRight = document.getElementById("btnRight");
+  const btnFire = document.getElementById("btnFire");
+  const btnMega = document.getElementById("btnMega");
+  const btnPause = document.getElementById("btnPause");
+  const attachHold = (el, key) => {
+    if (!el) return;
+    const down = (e) => {
+      e.preventDefault();
+      keys.add(key);
+    };
+    const up = (e) => {
+      e.preventDefault();
+      keys.delete(key);
+    };
+    el.addEventListener("pointerdown", down);
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+    el.addEventListener("pointerleave", up);
+    // Also support touch events on older browsers
+    el.addEventListener("touchstart", down, { passive: false });
+    el.addEventListener("touchend", up, { passive: false });
+  };
+  attachHold(btnLeft, "ArrowLeft");
+  attachHold(btnRight, "ArrowRight");
+  // Fire: hold to auto-fire using existing cooldown logic
+  attachHold(btnFire, " ");
+
+  // Mega & Pause are tap actions
+  if (btnMega) {
+    const onMega = (e) => {
+      e.preventDefault();
+      tryFireMega();
+    };
+    btnMega.addEventListener("click", onMega);
+    btnMega.addEventListener("pointerup", onMega);
+    btnMega.addEventListener("touchend", onMega, { passive: false });
+  }
+  if (btnPause) {
+    const onPause = (e) => {
+      e.preventDefault();
+      state.running = !state.running;
+    };
+    btnPause.addEventListener("click", onPause);
+    btnPause.addEventListener("pointerup", onPause);
+    btnPause.addEventListener("touchend", onPause, { passive: false });
+  }
+})();
+
 function playGameOverSound() {
   // Try to resume audio context just in case
   try {
