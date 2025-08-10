@@ -85,6 +85,7 @@ const bullets = [];
 const enemies = [];
 const enemyBullets = [];
 const megaBullets = [];
+const sparkParticles = [];
 
 // Galaxy background: parallax starfield + nebula
 const galaxy = {
@@ -428,6 +429,8 @@ function update(dt) {
       h: 10,
       vy: -520,
     });
+    // Initial spark burst at the muzzle
+    spawnSparks(player.x + player.width / 2, player.y - 10, 10);
     player.cooldown = player.fireDelayMs;
     canvas.classList.remove("flash");
     void canvas.offsetWidth; // restart animation
@@ -441,6 +444,11 @@ function update(dt) {
   for (const b of bullets) b.y += b.vy * dt;
   for (const b of enemyBullets) b.y += b.vy * dt;
   for (const b of megaBullets) b.y += b.vy * dt;
+  // Emit trailing sparks for player bullets
+  for (const b of bullets) {
+    if (Math.random() < 0.5) spawnSparks(b.x + b.w / 2, b.y + b.h, 1);
+  }
+  updateSparks(dt);
 
   // Update starfield
   for (const s of galaxy.stars) {
@@ -554,6 +562,10 @@ function update(dt) {
     if (enemyBullets[i].y > canvas.height + 20) enemyBullets.splice(i, 1);
   for (let i = megaBullets.length - 1; i >= 0; i--)
     if (megaBullets[i].y < -40) megaBullets.splice(i, 1);
+  // Cleanup dead sparks
+  for (let i = sparkParticles.length - 1; i >= 0; i--) {
+    if (sparkParticles[i].life <= 0) sparkParticles.splice(i, 1);
+  }
 
   // Next level
   if (enemies.every((e) => !e.alive)) {
@@ -566,6 +578,33 @@ function update(dt) {
 
   // HUD
   hud.scoreEl.textContent = String(state.score);
+}
+
+// Simple spark particle system for fireball trail
+function spawnSparks(x, y, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.PI + (Math.random() - 0.5) * 0.8; // mostly downward
+    const speed = 60 + Math.random() * 120;
+    sparkParticles.push({
+      x,
+      y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: 1 + Math.random() * 1.6,
+      color: Math.random() < 0.5 ? "#ffd447" : "#ff8c3a",
+      life: 0.25 + Math.random() * 0.25,
+      maxLife: 0.5,
+    });
+  }
+}
+function updateSparks(dt) {
+  for (const p of sparkParticles) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.98;
+    p.vy += 120 * dt; // slight gravity
+    p.life -= dt;
+  }
 }
 
 function draw() {
@@ -619,9 +658,38 @@ function draw() {
     ctx.fillRect(e.x, e.y, e.w, e.h);
   }
 
-  // Bullets
-  ctx.fillStyle = "#8aff80";
-  for (const b of bullets) ctx.fillRect(b.x, b.y, b.w, b.h);
+  // Player bullets as sparkling fireballs
+  for (const b of bullets) {
+    const cx = b.x + b.w / 2;
+    const cy = b.y + b.h / 2;
+    ctx.save();
+    ctx.shadowColor = "#ffd447";
+    ctx.shadowBlur = 16;
+    // Flame ellipse
+    const rx = 4;
+    const ry = 8;
+    const grad = ctx.createRadialGradient(cx, cy - 2, 0, cx, cy, ry);
+    grad.addColorStop(0.0, "#fffbe8");
+    grad.addColorStop(0.35, "#ffd447");
+    grad.addColorStop(0.75, "#ff8c3a");
+    grad.addColorStop(1.0, "rgba(255,140,58,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  // Sparks (additive blend for nice glow)
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (const p of sparkParticles) {
+    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
   // Mega bullets: draw Pixel Hulk sprite with a soft glow
   for (const b of megaBullets) {
     ctx.save();
@@ -865,9 +933,6 @@ function playHitSound() {
     el.addEventListener("pointerup", up);
     el.addEventListener("pointercancel", up);
     el.addEventListener("pointerleave", up);
-    // Also support touch events on older browsers
-    el.addEventListener("touchstart", down, { passive: false });
-    el.addEventListener("touchend", up, { passive: false });
   };
   attachHold(btnLeft, "ArrowLeft");
   attachHold(btnRight, "ArrowRight");
@@ -880,9 +945,7 @@ function playHitSound() {
       e.preventDefault();
       tryFireMega();
     };
-    btnMega.addEventListener("click", onMega);
-    btnMega.addEventListener("pointerup", onMega);
-    btnMega.addEventListener("touchend", onMega, { passive: false });
+    btnMega.addEventListener("pointerdown", onMega);
   }
   if (btnPause) {
     const onPause = (e) => {
@@ -897,8 +960,6 @@ function playHitSound() {
       }
     };
     btnPause.addEventListener("pointerdown", onPause);
-    btnPause.addEventListener("click", onPause);
-    btnPause.addEventListener("touchstart", onPause, { passive: false });
   }
 })();
 
