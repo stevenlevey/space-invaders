@@ -16,12 +16,27 @@ let sharedAudioCtx;
 function getAudioCtx() {
   if (!sharedAudioCtx) {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    sharedAudioCtx = new AudioCtx();
+    try {
+      sharedAudioCtx = new AudioCtx({ latencyHint: 'interactive' });
+    } catch (_) {
+      sharedAudioCtx = new AudioCtx();
+    }
   }
   return sharedAudioCtx;
 }
 // Unlock WebAudio on first interaction (fixes autoplay policy issues)
 let audioUnlocked = false;
+const audioBuffers = { mega: null, gameOver: null };
+async function loadAudioBuffer(url) {
+  try {
+    const ctx = getAudioCtx();
+    const res = await fetch(url);
+    const arr = await res.arrayBuffer();
+    return await ctx.decodeAudioData(arr);
+  } catch (_) {
+    return null;
+  }
+}
 function unlockAudio() {
   try {
     const ctx = getAudioCtx();
@@ -29,6 +44,10 @@ function unlockAudio() {
       ctx.resume().catch(() => {});
     }
     audioUnlocked = true;
+    // Warm up and decode buffers after first gesture
+    // Use encoded URLs for files with spaces
+    if (!audioBuffers.mega) loadAudioBuffer(encodeURI("/mega blast.mp3")).then((b)=>{ audioBuffers.mega = b; });
+    if (!audioBuffers.gameOver) loadAudioBuffer(encodeURI("/game over.mp3")).then((b)=>{ audioBuffers.gameOver = b; });
   } catch (_) {}
 }
 window.addEventListener("pointerdown", unlockAudio, { once: true });
@@ -787,14 +806,29 @@ function tryFireMega() {
   if (!megaReady || !state.running) return;
   megaReady = false;
   setMegaStatus();
-  // Play Mega Blast sound if available
-  if (sfxMega) {
-    try {
-      sfxMega.currentTime = 0;
-      const p = sfxMega.play();
-      if (p && typeof p.then === "function") p.catch(() => {});
-    } catch (_) {}
-  }
+  // Play Mega Blast sound via Web Audio buffer for low latency
+  try {
+    const ctx = getAudioCtx();
+    const start = () => {
+      if (audioBuffers.mega) {
+        const src = ctx.createBufferSource();
+        src.buffer = audioBuffers.mega;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.6);
+        src.connect(g).connect(ctx.destination);
+        src.start();
+        src.stop(ctx.currentTime + Math.min(0.8, src.buffer.duration));
+      } else if (sfxMega) {
+        // Fallback to HTML audio if buffer not ready yet
+        sfxMega.currentTime = 0;
+        const p = sfxMega.play();
+        if (p && typeof p.then === 'function') p.catch(()=>{});
+      }
+    };
+    if (ctx.state === 'suspended') ctx.resume().then(start).catch(start); else start();
+  } catch (_) {}
   const centerX = player.x + player.width / 2;
   const gap = 16; // pixels between the two mega blasts
   if (hulkImgLoaded) {
@@ -971,18 +1005,36 @@ function playGameOverSound() {
     const ctx = getAudioCtx();
     if (ctx.state === "suspended") ctx.resume().catch(() => {});
   } catch (_) {}
-  const el = sfxGameOver;
-  if (el) {
-    try {
-      el.currentTime = 0;
-      const p = el.play();
-      if (p && typeof p.then === "function") p.catch(() => fallbackTone());
-      return;
-    } catch (_) {
-      // fall through
-    }
+  // Prefer Web Audio buffer for low-latency playback
+  try {
+    const ctx = getAudioCtx();
+    const start = () => {
+      if (audioBuffers.gameOver) {
+        const src = ctx.createBufferSource();
+        src.buffer = audioBuffers.gameOver;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + Math.min(1.2, src.buffer.duration));
+        src.connect(g).connect(ctx.destination);
+        src.start();
+        src.stop(ctx.currentTime + Math.min(1.4, src.buffer.duration + 0.1));
+        return;
+      }
+      // Fallback to element or synthesized tone
+      const el = sfxGameOver;
+      if (el) {
+        el.currentTime = 0;
+        const p = el.play();
+        if (p && typeof p.then === 'function') p.catch(() => fallbackTone());
+      } else {
+        fallbackTone();
+      }
+    };
+    if (ctx.state === 'suspended') ctx.resume().then(start).catch(start); else start();
+  } catch (_) {
+    fallbackTone();
   }
-  fallbackTone();
 }
 
 function playBulletSound() {
