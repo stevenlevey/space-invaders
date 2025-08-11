@@ -398,6 +398,30 @@ hulkImg.onerror = () => {
 };
 hulkImg.src = "./hulk.png"; // Tries root first, then falls back to ./assets/hulk.png
 
+// Player ship image (pixel-art fighter)
+const fighterImg = new Image();
+let fighterImgLoaded = false;
+let fighterTriedAltPath = false;
+let fighterAspect = 1; // width / height ratio
+fighterImg.onload = () => {
+  fighterImgLoaded = true;
+  fighterAspect =
+    fighterImg.width && fighterImg.height
+      ? fighterImg.width / fighterImg.height
+      : 1;
+  // Fit player height to preserve image aspect based on current width
+  if (fighterAspect > 0) {
+    player.height = Math.max(18, Math.round(player.width / fighterAspect));
+  }
+};
+fighterImg.onerror = () => {
+  if (!fighterTriedAltPath) {
+    fighterTriedAltPath = true;
+    fighterImg.src = "./assets/fighterjet.png";
+  }
+};
+fighterImg.src = "./fighterjet.png";
+
 // Reserve bottom space on touch devices so on-screen controls don't cover the player
 let bottomUiMargin = 0;
 function computeUiMargin() {
@@ -639,6 +663,82 @@ function updateSparks(dt) {
   }
 }
 
+// Draw a stylized starfighter (inspired by classic space fighters)
+function drawStarfighter(ctx, x, y, w, h) {
+  ctx.save();
+  const cx = x + w * 0.5;
+
+  // Main fuselage
+  ctx.fillStyle = "#cfd8dc"; // light hull
+  ctx.strokeStyle = "#90a4ae"; // outline
+  ctx.lineWidth = Math.max(1, Math.floor(w * 0.04));
+  ctx.beginPath();
+  ctx.moveTo(cx, y); // nose
+  ctx.lineTo(x + w * 0.62, y + h * 0.28);
+  ctx.lineTo(x + w * 0.62, y + h * 0.58);
+  ctx.lineTo(cx + w * 0.06, y + h * 0.9);
+  ctx.lineTo(cx - w * 0.06, y + h * 0.9);
+  ctx.lineTo(x + w * 0.38, y + h * 0.58);
+  ctx.lineTo(x + w * 0.38, y + h * 0.28);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Wings
+  ctx.fillStyle = "#b0bec5";
+  // Left wing
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.12, y + h * 0.38);
+  ctx.lineTo(x + w * 0.38, y + h * 0.46);
+  ctx.lineTo(x + w * 0.38, y + h * 0.7);
+  ctx.lineTo(x + w * 0.06, y + h * 0.64);
+  ctx.closePath();
+  ctx.fill();
+  // Right wing
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.88, y + h * 0.38);
+  ctx.lineTo(x + w * 0.62, y + h * 0.46);
+  ctx.lineTo(x + w * 0.62, y + h * 0.7);
+  ctx.lineTo(x + w * 0.94, y + h * 0.64);
+  ctx.closePath();
+  ctx.fill();
+
+  // Canopy
+  ctx.fillStyle = "#7ef9ff";
+  const canopyW = w * 0.18;
+  const canopyH = h * 0.22;
+  ctx.beginPath();
+  ctx.moveTo(cx - canopyW * 0.5, y + h * 0.3 + canopyH);
+  ctx.lineTo(cx - canopyW * 0.5, y + h * 0.3);
+  ctx.lineTo(cx + canopyW * 0.5, y + h * 0.3);
+  ctx.lineTo(cx + canopyW * 0.5, y + h * 0.3 + canopyH);
+  ctx.closePath();
+  ctx.fill();
+
+  // Engine glow (rear)
+  const engineY = y + h * 0.86;
+  const engines = [x + w * 0.44, x + w * 0.56];
+  ctx.globalCompositeOperation = "lighter";
+  for (const ex of engines) {
+    const grad = ctx.createRadialGradient(
+      ex,
+      engineY,
+      0.5,
+      ex,
+      engineY,
+      Math.max(2, w * 0.1)
+    );
+    grad.addColorStop(0, "#e0fff7");
+    grad.addColorStop(0.4, "#7ef9ff");
+    grad.addColorStop(1, "rgba(126,249,255,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(ex, engineY, Math.max(2, w * 0.1), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -677,11 +777,17 @@ function draw() {
   }
   ctx.restore();
 
-  // Player
-  ctx.fillStyle = "#7ef9ff";
-  ctx.fillRect(player.x, player.y, player.width, player.height);
-  // Cannon tip
-  ctx.fillRect(player.x + player.width / 2 - 3, player.y - 8, 6, 8);
+  // Player starfighter (use image if available, otherwise the vector fallback)
+  if (fighterImgLoaded) {
+    ctx.save();
+    const prevSmooth = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = false; // keep pixel-art crisp
+    ctx.drawImage(fighterImg, player.x, player.y, player.width, player.height);
+    ctx.imageSmoothingEnabled = prevSmooth;
+    ctx.restore();
+  } else {
+    drawStarfighter(ctx, player.x, player.y, player.width, player.height);
+  }
 
   // Enemies
   for (const e of enemies) {

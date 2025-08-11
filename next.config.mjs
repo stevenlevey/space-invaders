@@ -1,6 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  async rewrites() {
+    return [
+      // Serve our PNG as the favicon and Apple touch icon to avoid 404s
+      { source: "/favicon.ico", destination: "/hulk.png" },
+      { source: "/apple-touch-icon.png", destination: "/hulk.png" },
+      { source: "/apple-touch-icon-precomposed.png", destination: "/hulk.png" },
+    ];
+  },
   async headers() {
     const isDev = process.env.NODE_ENV !== "production";
     const csp = [
