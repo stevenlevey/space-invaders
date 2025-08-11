@@ -1252,15 +1252,19 @@ function playGameOverSound() {
         const src = ctx.createBufferSource();
         src.buffer = audioBuffers.gameOver;
         const g = ctx.createGain();
-        g.gain.setValueAtTime(0.0001, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.16, ctx.currentTime + 0.02);
-        g.gain.exponentialRampToValueAtTime(
-          0.00001,
-          ctx.currentTime + Math.min(1.2, src.buffer.duration)
-        );
+        const t0 = ctx.currentTime + 0.005;
+        const dur = Math.max(0.3, src.buffer?.duration || 1.2);
+        const end = t0 + dur;
+        // Attack
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.16, t0 + 0.02);
+        // Gentle release that finishes at the end of the buffer
+        const releaseStart = Math.max(t0 + 0.05, end - 0.18);
+        g.gain.exponentialRampToValueAtTime(0.00001, end);
         src.connect(g).connect(ctx.destination);
-        src.start();
-        src.stop(ctx.currentTime + Math.min(1.4, src.buffer.duration + 0.1));
+        src.start(t0);
+        // Stop just after natural buffer end (tiny tail) so it doesn't cut off
+        src.stop(end + 0.02);
         return;
       }
       // Fallback to element or synthesized tone
