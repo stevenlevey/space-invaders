@@ -9,7 +9,7 @@ export default function Page() {
             Score: <span id="score">0</span>
           </div>
           <div>
-            Lives: <span id="lives">3</span>
+            Lives: <span id="lives">8</span>
           </div>
           <div>
             Level: <span id="level">1</span>
@@ -23,7 +23,12 @@ export default function Page() {
         </button>
       </div>
 
-      <canvas id="gameCanvas" width={800} height={600} style={{ maxWidth: '100%', height: 'auto' }}></canvas>
+      <canvas
+        id="gameCanvas"
+        width={800}
+        height={600}
+        style={{ maxWidth: "100%", height: "auto" }}
+      ></canvas>
 
       <div id="gameOverOverlay" aria-live="polite" aria-hidden="true">
         <div className="retro">
@@ -39,9 +44,24 @@ export default function Page() {
         Restart
       </div>
 
-      <audio id="sfxBullet" src="/bullet.mp3" preload="auto" playsInline></audio>
-      <audio id="sfxGameOver" src="/game over.mp3" preload="auto" playsInline></audio>
-      <audio id="sfxMega" src="/mega blast.mp3" preload="auto" playsInline></audio>
+      <audio
+        id="sfxBullet"
+        src="/bullet.mp3"
+        preload="auto"
+        playsInline
+      ></audio>
+      <audio
+        id="sfxGameOver"
+        src="/game over.mp3"
+        preload="auto"
+        playsInline
+      ></audio>
+      <audio
+        id="sfxMega"
+        src="/mega blast.mp3"
+        preload="auto"
+        playsInline
+      ></audio>
 
       <div id="touchControls" aria-label="Touch controls" role="group">
         <div className="cluster left">

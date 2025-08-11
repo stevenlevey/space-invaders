@@ -93,8 +93,10 @@ function resizePixelTextCanvas() {
 const state = {
   running: true,
   score: 0,
-  lives: 3,
+  lives: 8,
   level: 1,
+  kills: 0,
+  shots: 1, // bullets per volley (1..4)
 };
 
 // Player
@@ -438,8 +440,10 @@ window.addEventListener("resize", computeUiMargin);
 
 function reset() {
   state.score = 0;
-  state.lives = 3;
+  state.lives = 8;
   state.level = 1;
+  state.kills = 0;
+  state.shots = 1;
   bullets.length = 0;
   enemyBullets.length = 0;
   megaBullets.length = 0;
@@ -453,6 +457,39 @@ function reset() {
   hud.scoreEl.textContent = String(state.score);
   hud.livesEl.textContent = String(state.lives);
   hud.levelEl.textContent = String(state.level);
+}
+
+// Increase number of bullets per volley based on total kills: +1 every 10 kills, max 4
+function updateShotsFromKills() {
+  const desiredShots = Math.min(4, 1 + Math.floor(state.kills / 10));
+  if (desiredShots !== state.shots) {
+    state.shots = desiredShots;
+  }
+}
+
+function firePlayerVolley() {
+  const numShots = state.shots;
+  const center = player.x + player.width / 2;
+  const bulletWidth = 4;
+  const spreadOffsetPx = 12; // initial lateral spacing at muzzle
+  const spreadVx = 120; // horizontal velocity per offset step (px/s)
+
+  // Symmetric offsets around center: e.g., for 3 shots -> [-1, 0, 1]
+  const half = (numShots - 1) / 2;
+  for (let i = 0; i < numShots; i++) {
+    const offsetIndex = i - half; // can be fractional for even counts
+    const x = center - bulletWidth / 2 + offsetIndex * spreadOffsetPx;
+    bullets.push({
+      x,
+      y: player.y - 8,
+      w: bulletWidth,
+      h: 10,
+      vy: -520,
+      vx: offsetIndex * spreadVx,
+    });
+    spawnSparks(x + bulletWidth / 2, player.y - 10, 6);
+  }
+  playBulletSound();
 }
 
 function aabb(a, b) {
@@ -478,26 +515,20 @@ function update(dt) {
   // Fire
   player.cooldown -= dt * 1000;
   if ((keys.has(" ") || keys.has("Space")) && player.cooldown <= 0) {
-    bullets.push({
-      x: player.x + player.width / 2 - 2,
-      y: player.y - 8,
-      w: 4,
-      h: 10,
-      vy: -520,
-    });
-    // Initial spark burst at the muzzle
-    spawnSparks(player.x + player.width / 2, player.y - 10, 10);
+    firePlayerVolley();
     player.cooldown = player.fireDelayMs;
     canvas.classList.remove("flash");
     void canvas.offsetWidth; // restart animation
     canvas.classList.add("flash");
-    playBulletSound();
   }
 
   // Mega fire is triggered on keydown to ensure audio is allowed under user gesture
 
   // Update bullets
-  for (const b of bullets) b.y += b.vy * dt;
+  for (const b of bullets) {
+    b.y += b.vy * dt;
+    if (typeof b.vx === "number") b.x += b.vx * dt;
+  }
   for (const b of enemyBullets) b.y += b.vy * dt;
   for (const b of megaBullets) b.y += b.vy * dt;
   // Emit trailing sparks for player bullets
@@ -582,6 +613,8 @@ function update(dt) {
         e.alive = false;
         b.y = -9999; // remove
         state.score += 10;
+        state.kills += 1;
+        updateShotsFromKills();
       }
     }
   }
@@ -593,6 +626,8 @@ function update(dt) {
       if (aabb({ x: mb.x, y: mb.y, w: mb.w, h: mb.h }, e)) {
         e.alive = false;
         state.score += 15; // extra reward for mega
+        state.kills += 1;
+        updateShotsFromKills();
       }
     }
   }
